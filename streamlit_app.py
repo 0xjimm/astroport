@@ -6,7 +6,18 @@ import pandas as pd
 import streamlit as st
 
 # streamlit config
-st.set_page_config(layout="wide")
+# st.set_page_config(layout="wide")
+
+# sidebar information
+st.sidebar.markdown(
+    f"""
+    ## Lockdrop Configuration
+    """
+)
+
+astro_price = st.sidebar.number_input(
+    "$ASTRO Price", min_value=0.01, value=2.5, help="Price of $ASTRO"
+)
 
 # requests headers
 headers = {
@@ -36,25 +47,21 @@ df = (
 )
 
 # astroport lockdrop pairs
-astro_pairs = {
-    "bLUNA-LUNA": "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p",
-    "LUNA-UST": "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6",
-    "ANC-UST": "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3",
-    "MIR-UST": "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux",
-    "ORION-UST": "terra1z6tp0ruxvynsx5r9mmcc2wcezz9ey9pmrw5r8g",
-    "STT-UST": "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll",
-    "VKR-UST": "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0",
-    "MINE-UST": "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz",
-    "PSI-UST": "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf",
-    "APOLLO-UST": "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78",
-}
+astro_pairs = [
+    ["bLUNA-LUNA", "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p", 17250000],
+    ["LUNA-UST", "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6", 21750000],
+    ["ANC-UST", "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3", 14250000],
+    ["MIR-UST", "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux", 6750000],
+    ["ORION-UST", "terra1z6tp0ruxvynsx5r9mmcc2wcezz9ey9pmrw5r8g", 1500000],
+    ["STT-UST", "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll", 3750000],
+    ["VKR-UST", "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0", 2250000],
+    ["MINE-UST", "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz", 3000000],
+    ["PSI-UST", "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf", 2250000],
+    ["APOLLO-UST", "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78", 2250000],
+]
 
 # convert to dataframe
-astro_pairs = (
-    pd.DataFrame.from_dict(astro_pairs, orient="index")
-    .reset_index()
-    .rename(columns={"index": "pair", 0: "address"})
-)
+astro_pairs = pd.DataFrame(astro_pairs, columns=["pair", "address", "astro_tokens"])
 
 # filter for astroport pairs
 df = df[df["address"].isin(astro_pairs["address"])]
@@ -79,8 +86,9 @@ df["liquidity_usd"] = df["asset1_poolAmount"] // 1_000_000 * 2
 df_liq = df[
     [
         "pair",
-        "address",
+        # "address",
         "liquidity_usd",
+        "astro_tokens",
     ]
 ]
 
@@ -106,10 +114,24 @@ df_liq.loc[bluna_luna.index, "liquidity_usd"] = int(
     df.loc[bluna_luna.index, "asset1_poolAmount"] // 1_000_000 * 2 * luna_price
 )
 
-# astro tokens
+# value of lockdrop
+df_liq["value_of_lockdrop"] = df_liq["astro_tokens"] * astro_price
+
+# ratio
+df_liq["ratio"] = df_liq["value_of_lockdrop"] / df_liq["liquidity_usd"]
 
 # sensitivity
 
 st.header("Astroport Lockdrop Dashboard")
 
-st.write(df_liq)
+st.dataframe(
+    df_liq.style.format(
+        {
+            "value_of_lockdrop": "${:,.0f}",
+            "liquidity_usd": "${:,.0f}",
+            "astro_tokens": "{:,}",
+            "ratio": "{:.2%}",
+        }
+    ),
+    height=500,
+)
