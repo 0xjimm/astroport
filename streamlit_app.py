@@ -8,17 +8,6 @@ import streamlit as st
 # streamlit config
 # st.set_page_config(layout="wide")
 
-# sidebar information
-st.sidebar.markdown(
-    f"""
-    ## Lockdrop Configuration
-    """
-)
-
-astro_price = st.sidebar.number_input(
-    "$ASTRO Price", min_value=0.01, value=2.5, help="Price of $ASTRO"
-)
-
 # requests headers
 headers = {
     "authority": "api.coinhall.org",
@@ -80,15 +69,15 @@ df = pd.concat(
 df = df.merge(astro_pairs, on="address")
 
 # liquidity in usd
-df["liquidity_usd"] = df["asset1_poolAmount"] // 1_000_000 * 2
+df["liq"] = df["asset1_poolAmount"] // 1_000_000 * 2
 
 # columns of interest
 df_liq = df[
     [
         "pair",
         # "address",
-        "liquidity_usd",
         "astro_tokens",
+        "liq",
     ]
 ]
 
@@ -98,39 +87,87 @@ luna_price = (luna_ust["asset0_poolAmount"] / luna_ust["asset1_poolAmount"])[0]
 
 # fix mirror liquidity
 mir_ust = df[df["pair"] == "MIR-UST"]
-df_liq.loc[mir_ust.index, "liquidity_usd"] = (
+df_liq.loc[mir_ust.index, "liq"] = (
     df.loc[mir_ust.index, "asset0_poolAmount"] // 1_000_000 * 2
 )
 
 # fix luna liquidity
 luna_ust = df[df["pair"] == "LUNA-UST"]
-df_liq.loc[luna_ust.index, "liquidity_usd"] = (
+df_liq.loc[luna_ust.index, "liq"] = (
     df.loc[luna_ust.index, "asset0_poolAmount"] // 1_000_000 * 2
 )
 
 # fix bluna liquidity
 bluna_luna = df[df["pair"] == "bLUNA-LUNA"]
-df_liq.loc[bluna_luna.index, "liquidity_usd"] = int(
+df_liq.loc[bluna_luna.index, "liq"] = int(
     df.loc[bluna_luna.index, "asset1_poolAmount"] // 1_000_000 * 2 * luna_price
 )
+
+# sidebar
+st.sidebar.markdown(
+    f"""
+    # Assumptions
+    """
+)
+
+# astro price prediction
+astro_price = st.sidebar.number_input(
+    "$ASTRO Price", min_value=0.01, value=2.5, help="Price of $ASTRO"
+)
+
+st.sidebar.header("Liquidity Predictions")
+
+# slider bars for predcitions
+for i, row in df_liq.iterrows():
+    df_liq.loc[i, "adj"] = (
+        st.sidebar.slider(
+            f'{row["pair"]} Percent Increase',
+            format="%d%%",
+            max_value=500,
+            value=int(df_liq["liq"].sum() / row["liq"]),
+        )
+        / 100
+    )
+
+    df_liq.loc[i, "adj_liq"] = df_liq.loc[i, "liq"] * (1 + df_liq.loc[i, "adj"])
 
 # value of lockdrop
 df_liq["value_of_lockdrop"] = df_liq["astro_tokens"] * astro_price
 
 # ratio
-df_liq["ratio"] = df_liq["value_of_lockdrop"] / df_liq["liquidity_usd"]
+df_liq["ratio"] = df_liq["value_of_lockdrop"] / df_liq["liq"]
+df_liq["adj_ratio"] = df_liq["value_of_lockdrop"] / df_liq["adj_liq"]
 
-# sensitivity
+# separate tables
+df_adj = df_liq.drop(columns=["adj", "liq", "ratio"])
+df_liq = df_liq.drop(columns=["adj", "adj_liq", "adj_ratio"])
 
+# main body
 st.header("Astroport Lockdrop Dashboard")
+
+st.markdown("### Original Allocation")
 
 st.dataframe(
     df_liq.style.format(
         {
             "value_of_lockdrop": "${:,.0f}",
-            "liquidity_usd": "${:,.0f}",
+            "liq": "${:,.0f}",
             "astro_tokens": "{:,}",
             "ratio": "{:.2%}",
+        }
+    ),
+    height=500,
+)
+
+st.markdown("### Predicted Allocation")
+
+st.dataframe(
+    df_adj.style.format(
+        {
+            "value_of_lockdrop": "${:,.0f}",
+            "adj_liq": "${:,.0f}",
+            "astro_tokens": "{:,}",
+            "adj_ratio": "{:.2%}",
         }
     ),
     height=500,
