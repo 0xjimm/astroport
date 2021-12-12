@@ -31,26 +31,33 @@ response = requests.get(
 df = (
     pd.DataFrame.from_dict(response, orient="index")
     .reset_index(drop=False)
-    .rename(columns={"index": "pair"})
+    .rename(columns={"index": "address"})
     .drop(labels=["timestamp", "unofficial", "startAt", "endAt"], axis=1)
 )
 
 # astroport lockdrop pairs
-astro_pairs = [
-    "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p",
-    "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6",
-    "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3",
-    "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux",
-    "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux",
-    "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll",
-    "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0",
-    "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz",
-    "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf",
-    "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78",
-]
+astro_pairs = {
+    "bLUNA-LUNA": "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p",
+    "LUNA-UST": "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6",
+    "ANC-UST": "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3",
+    "MIR-UST": "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux",
+    "ORION-UST": "terra1z6tp0ruxvynsx5r9mmcc2wcezz9ey9pmrw5r8g",
+    "STT-UST": "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll",
+    "VKR-UST": "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0",
+    "MINE-UST": "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz",
+    "PSI-UST": "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf",
+    "APOLLO-UST": "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78",
+}
+
+# convert to dataframe
+astro_pairs = (
+    pd.DataFrame.from_dict(astro_pairs, orient="index")
+    .reset_index()
+    .rename(columns={"index": "pair", 0: "address"})
+)
 
 # filter for astroport pairs
-df = df[df["pair"].isin(astro_pairs)]
+df = df[df["address"].isin(astro_pairs["address"])]
 
 # parse json data
 df = pd.concat(
@@ -62,29 +69,42 @@ df = pd.concat(
     axis=1,
 )
 
+# merge data
+df = df.merge(astro_pairs, on="address")
+
 # liquidity in usd
 df["liquidity_usd"] = df["asset1_poolAmount"] // 1_000_000 * 2
 
 # columns of interest
 df_liq = df[
-    ["asset0_name", "asset0_symbol", "asset1_name", "asset1_symbol", "liquidity_usd"]
+    [
+        "pair",
+        "address",
+        "liquidity_usd",
+    ]
 ]
 
 # luna price
-luna_price = df.loc[22, "asset0_poolAmount"] / df.loc[22, "asset1_poolAmount"]
+luna_ust = df[df["pair"] == "LUNA-UST"]
+luna_price = (luna_ust["asset0_poolAmount"] / luna_ust["asset1_poolAmount"])[0]
 
 # fix mirror liquidity
-df_liq.loc[30, "liquidity_usd"] = df.loc[30, "asset0_poolAmount"] // 1_000_000 * 2
-
-# fix luna liquidity
-df_liq.loc[22, "liquidity_usd"] = df.loc[22, "asset0_poolAmount"] // 1_000_000 * 2
-
-# fix bluna liquidity
-df_liq.loc[23, "liquidity_usd"] = int(
-    df.loc[23, "asset1_poolAmount"] // 1_000_000 * 2 * luna_price
+mir_ust = df[df["pair"] == "MIR-UST"]
+df_liq.loc[mir_ust.index, "liquidity_usd"] = (
+    df.loc[mir_ust.index, "asset0_poolAmount"] // 1_000_000 * 2
 )
 
-# rename columns
+# fix luna liquidity
+luna_ust = df[df["pair"] == "LUNA-UST"]
+df_liq.loc[luna_ust.index, "liquidity_usd"] = (
+    df.loc[luna_ust.index, "asset0_poolAmount"] // 1_000_000 * 2
+)
+
+# fix bluna liquidity
+bluna_luna = df[df["pair"] == "bLUNA-LUNA"]
+df_liq.loc[bluna_luna.index, "liquidity_usd"] = int(
+    df.loc[bluna_luna.index, "asset1_poolAmount"] // 1_000_000 * 2 * luna_price
+)
 
 # astro tokens
 
