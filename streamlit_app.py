@@ -21,6 +21,28 @@ astro_price = st.sidebar.number_input(
     "$ASTRO Price", min_value=0.01, value=2.5, help="Price of $ASTRO"
 )
 
+# average lockup
+avg_lock = int(
+    st.sidebar.number_input(
+        "Average Lockup Duration",
+        min_value=2,
+        max_value=52,
+        value=4,
+        help="Average lockup duration.",
+    )
+)
+
+# chad lockup
+chad_lock = int(
+    st.sidebar.number_input(
+        "Chad Lockup Duration",
+        min_value=2,
+        max_value=52,
+        value=26,
+        help="Chad lockup duration",
+    )
+)
+
 # requests headers
 headers = {
     "authority": "api.coinhall.org",
@@ -183,10 +205,25 @@ with st.sidebar.expander("AstroChad LP Positions"):
 df_chad = df_adj[["pair", "chad_lp"]]
 df_adj.drop(columns=["chad_lp"], inplace=True)
 
+# lockdrop weights
+df_weights = pd.read_csv("lockdrop_weights.csv")
+
 # chad tokens
-df_chad["astro_tokens"] = (
-    df_chad["chad_lp"] / df_adj["adj_liq"] * df_adj["astro_tokens"]
+df_chad["chad_weight"] = (
+    df_chad["chad_lp"] * df_weights.iloc[chad_lock]["adjusted_weight"]
 )
+
+df_chad["avg_weight"] = (df_adj["adj_liq"] - df_chad["chad_lp"]) * df_weights.iloc[
+    avg_lock
+]["adjusted_weight"]
+
+
+df_chad["astro_tokens"] = (
+    df_chad["chad_weight"]
+    / (df_chad["avg_weight"] + df_chad["chad_weight"])
+    * df_adj["astro_tokens"]
+)
+
 
 # chad token value
 df_chad["astro_value"] = df_chad["astro_tokens"] * astro_price
@@ -243,6 +280,11 @@ st.dataframe(
 )
 
 st.markdown("### AstroChad Projections")
+
+# reorder table
+df_chad = df_chad[
+    ["chad_lp", "astro_tokens", "astro_value", "lp_rewards", "total_rewards"]
+]
 
 st.dataframe(
     df_chad.style.format(
