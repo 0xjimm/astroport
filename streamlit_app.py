@@ -211,7 +211,7 @@ with st.sidebar.expander("Average Lockup Duration"):
             f"{row['pair']}",
             min_value=2,
             max_value=52,
-            value=4,
+            value=12,
             help="Lockup in weeks",
         )
 
