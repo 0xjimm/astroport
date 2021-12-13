@@ -4,6 +4,7 @@ import requests
 import numpy as np
 import pandas as pd
 import streamlit as st
+import seaborn as sns
 
 # streamlit config
 # st.set_page_config(layout="wide")
@@ -103,6 +104,13 @@ df_liq.loc[bluna_luna.index, "liq"] = int(
     df.loc[bluna_luna.index, "asset1_poolAmount"] // 1_000_000 * 2 * luna_price
 )
 
+# sort by astro_tokens
+df_liq.sort_values(
+    "astro_tokens",
+    ascending=False,
+    inplace=True,
+)
+
 # sidebar
 st.sidebar.markdown(
     f"""
@@ -112,7 +120,7 @@ st.sidebar.markdown(
 
 # astro price prediction
 astro_price = st.sidebar.number_input(
-    "$ASTRO Price", min_value=0.01, value=2.5, help="Price of $ASTRO"
+    "$ASTRO Price", min_value=0.01, value=1.0, help="Price of $ASTRO"
 )
 
 st.sidebar.header("Liquidity Predictions")
@@ -123,7 +131,7 @@ for i, row in df_liq.iterrows():
         st.sidebar.slider(
             f'{row["pair"]} Percent Increase',
             format="%d%%",
-            max_value=500,
+            max_value=200,
             value=int(df_liq["liq"].sum() / row["liq"]),
         )
         / 100
@@ -145,10 +153,14 @@ df_liq = df_liq.drop(columns=["adj", "adj_liq", "adj_ratio"])
 # main body
 st.header("Astroport Lockdrop Dashboard")
 
+st.markdown("Liquidity data from Coinhall.")
+
 st.markdown("### Original Allocation")
 
+cm = sns.light_palette("green", as_cmap=True)
+
 st.dataframe(
-    df_liq.style.format(
+    df_liq.style.background_gradient(cmap=cm, subset=["ratio"]).format(
         {
             "value_of_lockdrop": "${:,.0f}",
             "liq": "${:,.0f}",
@@ -162,7 +174,7 @@ st.dataframe(
 st.markdown("### Predicted Allocation")
 
 st.dataframe(
-    df_adj.style.format(
+    df_adj.style.background_gradient(cmap=cm, subset=["adj_ratio"]).format(
         {
             "value_of_lockdrop": "${:,.0f}",
             "adj_liq": "${:,.0f}",
@@ -172,3 +184,6 @@ st.dataframe(
     ),
     height=500,
 )
+
+# disclaimer
+st.info("This tool was created for educational purposes only, not financial advice.")
