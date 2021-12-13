@@ -21,28 +21,6 @@ astro_price = st.sidebar.number_input(
     "$ASTRO Price", min_value=0.01, value=2.5, help="Price of $ASTRO"
 )
 
-# average lockup
-avg_lock = int(
-    st.sidebar.number_input(
-        "Average Lockup Duration",
-        min_value=2,
-        max_value=52,
-        value=4,
-        help="Average lockup duration.",
-    )
-)
-
-# chad lockup
-chad_lock = int(
-    st.sidebar.number_input(
-        "Chad Lockup Duration",
-        min_value=2,
-        max_value=52,
-        value=26,
-        help="Chad lockup duration",
-    )
-)
-
 # requests headers
 headers = {
     "authority": "api.coinhall.org",
@@ -208,22 +186,45 @@ df_adj.drop(columns=["chad_lp"], inplace=True)
 # lockdrop weights
 df_weights = pd.read_csv("lockdrop_weights.csv")
 
-# chad tokens
-df_chad["chad_weight"] = (
-    df_chad["chad_lp"] * df_weights.iloc[chad_lock - 1]["adjusted_weight"]
-)
+# chad weights
+with st.sidebar.expander("AstroChad Lockup Duration"):
 
-df_chad["avg_weight"] = (df_adj["adj_liq"] - df_chad["chad_lp"]) * df_weights.iloc[
-    avg_lock - 1
-]["adjusted_weight"]
+    for i, row in df_chad.iterrows():
+        df_chad.loc[i, "chad_lock"] = st.number_input(
+            f"{row['pair']}",
+            min_value=2,
+            max_value=52,
+            value=26,
+            help="Lockup in weeks",
+        )
 
+        df_chad.loc[i, "chad_weight"] = (
+            row["chad_lp"]
+            * df_weights.iloc[int(df_chad.loc[i, "chad_lock"]) - 1]["adjusted_weight"]
+        )
 
+# avg weights
+with st.sidebar.expander("Average Lockup Duration"):
+
+    for i, row in df_chad.iterrows():
+        df_chad.loc[i, "avg_lock"] = st.number_input(
+            f"{row['pair']}",
+            min_value=2,
+            max_value=52,
+            value=4,
+            help="Lockup in weeks",
+        )
+
+        df_chad.loc[i, "avg_weight"] = (
+            df_adj.loc[i, "adj_liq"] - row["chad_lp"]
+        ) * df_weights.iloc[int(df_chad.loc[i, "avg_lock"]) - 1]["adjusted_weight"]
+
+# chad rewards
 df_chad["astro_tokens"] = (
     df_chad["chad_weight"]
     / (df_chad["avg_weight"] + df_chad["chad_weight"])
     * df_adj["astro_tokens"]
 )
-
 
 # chad token value
 df_chad["astro_value"] = df_chad["astro_tokens"] * astro_price
@@ -283,7 +284,7 @@ st.markdown("### AstroChad Projections")
 
 # reorder table
 df_chad = df_chad[
-    ["chad_lp", "astro_tokens", "astro_value", "lp_rewards", "total_rewards"]
+    ["pair", "chad_lp", "astro_tokens", "astro_value", "lp_rewards", "total_rewards"]
 ]
 
 st.dataframe(
