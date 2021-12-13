@@ -50,20 +50,22 @@ df = (
 
 # astroport lockdrop pairs
 astro_pairs = [
-    ["bLUNA-LUNA", "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p", 17250000],
-    ["LUNA-UST", "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6", 21750000],
-    ["ANC-UST", "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3", 14250000],
-    ["MIR-UST", "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux", 6750000],
-    ["ORION-UST", "terra1z6tp0ruxvynsx5r9mmcc2wcezz9ey9pmrw5r8g", 1500000],
-    ["STT-UST", "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll", 3750000],
-    ["VKR-UST", "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0", 2250000],
-    ["MINE-UST", "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz", 3000000],
-    ["PSI-UST", "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf", 2250000],
-    ["APOLLO-UST", "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78", 2250000],
+    ["bLUNA-LUNA", "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p", 17250000, 0],
+    ["LUNA-UST", "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6", 21750000, 0],
+    ["ANC-UST", "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3", 14250000, 0.8474],
+    ["MIR-UST", "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux", 6750000, 0.2023],
+    ["ORION-UST", "terra1z6tp0ruxvynsx5r9mmcc2wcezz9ey9pmrw5r8g", 1500000, 0.7904],
+    ["STT-UST", "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll", 3750000, 0.7230],
+    ["VKR-UST", "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0", 2250000, 2.703],
+    ["MINE-UST", "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz", 3000000, 0.8577],
+    ["PSI-UST", "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf", 2250000, 0.97],
+    ["APOLLO-UST", "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78", 2250000, 0],
 ]
 
 # convert to dataframe
-astro_pairs = pd.DataFrame(astro_pairs, columns=["pair", "address", "astro_tokens"])
+astro_pairs = pd.DataFrame(
+    astro_pairs, columns=["pair", "address", "astro_tokens", "lp_rewards"]
+)
 
 # filter for astroport pairs
 df = df[df["address"].isin(astro_pairs["address"])]
@@ -91,6 +93,7 @@ df_liq = df[
         # "address",
         "astro_tokens",
         "liq",
+        "lp_rewards",
     ]
 ]
 
@@ -118,6 +121,16 @@ df_liq.loc[bluna_luna.index, "liq"] = int(
 
 # sort by astro_tokens
 df_liq = df_liq.sort_values("astro_tokens", ascending=False).reset_index(drop=True)
+
+# current LP rewards
+with st.sidebar.expander("LP Staking Rewards"):
+
+    st.write("LP incentives on top of $ASTRO")
+
+    for i, row in df_liq.iterrows():
+        df_liq.loc[i, "lp_rewards"] = st.number_input(
+            f'{row["pair"]}', value=row["lp_rewards"]
+        )
 
 # slider bars for predcitions
 with st.sidebar.expander("Liquidity Predictions"):
@@ -159,8 +172,12 @@ with st.sidebar.expander("AstroChad LP Positions"):
         # add to adj liquidity
         df_adj.loc[i, "adj_liq"] += df_adj.loc[i, "chad_lp"]
 
+    # recalculate lp_rewards
+    df_adj["lp_rewards"] = df_liq["liq"] / df_adj["adj_liq"] * df_adj["lp_rewards"]
+
     # recalculate ratio
     df_adj["adj_ratio"] = df_adj["astro_value"] / df_adj["adj_liq"]
+
 
 # chad positions
 df_chad = df_adj[["pair", "chad_lp"]]
@@ -174,6 +191,12 @@ df_chad["astro_tokens"] = (
 # chad token value
 df_chad["astro_value"] = df_chad["astro_tokens"] * astro_price
 
+# lp reward value
+df_chad["lp_rewards"] = df_chad["chad_lp"] * df_adj["lp_rewards"]
+
+# total rewards
+df_chad["total_rewards"] = df_chad["lp_rewards"] + df_chad["astro_value"]
+
 # main body
 st.header("Astroport Lockdrop Dashboard")
 
@@ -183,13 +206,17 @@ st.markdown("### Original Allocation")
 
 cm = sns.light_palette("green", as_cmap=True)
 
+# reorder table
+df_liq = df_liq[["pair", "astro_tokens", "astro_value", "liq", "ratio", "lp_rewards"]]
+
 st.dataframe(
-    df_liq.style.background_gradient(cmap=cm, subset=["ratio"]).format(
+    df_liq.style.background_gradient(cmap=cm, subset=["lp_rewards", "ratio"]).format(
         {
             "astro_value": "${:,.0f}",
             "liq": "${:,.0f}",
             "astro_tokens": "{:,}",
             "ratio": "{:.2%}",
+            "lp_rewards": "{:.2%}",
         }
     ),
     height=500,
@@ -197,13 +224,21 @@ st.dataframe(
 
 st.markdown("### Predicted Allocation")
 
+# reorder table
+df_adj = df_adj[
+    ["pair", "astro_tokens", "astro_value", "adj_liq", "adj_ratio", "lp_rewards"]
+]
+
 st.dataframe(
-    df_adj.style.background_gradient(cmap=cm, subset=["adj_ratio"]).format(
+    df_adj.style.background_gradient(
+        cmap=cm, subset=["lp_rewards", "adj_ratio"]
+    ).format(
         {
             "astro_value": "${:,.0f}",
             "adj_liq": "${:,.0f}",
             "astro_tokens": "{:,}",
             "adj_ratio": "{:.2%}",
+            "lp_rewards": "{:.2%}",
         }
     ),
     height=500,
@@ -217,6 +252,8 @@ st.dataframe(
             "chad_lp": "${:,.0f}",
             "astro_tokens": "{:,.0f}",
             "astro_value": "${:,.0f}",
+            "lp_rewards": "${:,.0f}",
+            "total_rewards": "${:,.0f}",
         }
     ),
     height=500,
