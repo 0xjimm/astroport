@@ -140,13 +140,14 @@ with st.sidebar.expander("Liquidity Predictions"):
             st.slider(
                 f'{row["pair"]}',
                 format="%d%%",
+                min_value=0,
                 max_value=200,
-                value=int(df_liq["liq"].sum() / row["liq"]),
+                value=100,
             )
             / 100
         )
 
-        df_liq.loc[i, "adj_liq"] = df_liq.loc[i, "liq"] * (1 + df_liq.loc[i, "adj"])
+        df_liq.loc[i, "adj_liq"] = df_liq.loc[i, "liq"] * (df_liq.loc[i, "adj"])
 
 
 # value of lockdrop
