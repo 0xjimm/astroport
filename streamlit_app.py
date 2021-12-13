@@ -9,6 +9,18 @@ import seaborn as sns
 # streamlit config
 # st.set_page_config(layout="wide")
 
+# sidebar
+st.sidebar.markdown(
+    f"""
+    # Assumptions
+    """
+)
+
+# astro price prediction
+astro_price = st.sidebar.number_input(
+    "$ASTRO Price", min_value=0.01, value=2.5, help="Price of $ASTRO"
+)
+
 # requests headers
 headers = {
     "authority": "api.coinhall.org",
@@ -105,50 +117,62 @@ df_liq.loc[bluna_luna.index, "liq"] = int(
 )
 
 # sort by astro_tokens
-df_liq.sort_values(
-    "astro_tokens",
-    ascending=False,
-    inplace=True,
-)
-
-# sidebar
-st.sidebar.markdown(
-    f"""
-    # Assumptions
-    """
-)
-
-# astro price prediction
-astro_price = st.sidebar.number_input(
-    "$ASTRO Price", min_value=0.01, value=1.0, help="Price of $ASTRO"
-)
-
-st.sidebar.header("Liquidity Predictions")
+df_liq = df_liq.sort_values("astro_tokens", ascending=False).reset_index(drop=True)
 
 # slider bars for predcitions
-for i, row in df_liq.iterrows():
-    df_liq.loc[i, "adj"] = (
-        st.sidebar.slider(
-            f'{row["pair"]} Percent Increase',
-            format="%d%%",
-            max_value=200,
-            value=int(df_liq["liq"].sum() / row["liq"]),
-        )
-        / 100
-    )
+with st.sidebar.expander("Liquidity Predictions"):
+    for i, row in df_liq.iterrows():
 
-    df_liq.loc[i, "adj_liq"] = df_liq.loc[i, "liq"] * (1 + df_liq.loc[i, "adj"])
+        df_liq.loc[i, "adj"] = (
+            st.slider(
+                f'{row["pair"]}',
+                format="%d%%",
+                max_value=200,
+                value=int(df_liq["liq"].sum() / row["liq"]),
+            )
+            / 100
+        )
+
+        df_liq.loc[i, "adj_liq"] = df_liq.loc[i, "liq"] * (1 + df_liq.loc[i, "adj"])
+
 
 # value of lockdrop
-df_liq["value_of_lockdrop"] = df_liq["astro_tokens"] * astro_price
+df_liq["astro_value"] = df_liq["astro_tokens"] * astro_price
 
-# ratio
-df_liq["ratio"] = df_liq["value_of_lockdrop"] / df_liq["liq"]
-df_liq["adj_ratio"] = df_liq["value_of_lockdrop"] / df_liq["adj_liq"]
+# ratios
+df_liq["ratio"] = df_liq["astro_value"] / df_liq["liq"]
+df_liq["adj_ratio"] = df_liq["astro_value"] / df_liq["adj_liq"]
 
 # separate tables
 df_adj = df_liq.drop(columns=["adj", "liq", "ratio"])
 df_liq = df_liq.drop(columns=["adj", "adj_liq", "adj_ratio"])
+
+# user lp positions
+with st.sidebar.expander("AstroChad LP Positions"):
+
+    # user input
+    for i, row in df_adj.iterrows():
+        df_adj.loc[i, "chad_lp"] = st.number_input(
+            f'{row["pair"]}', value=0, step=100, format="%d"
+        )
+
+        # add to adj liquidity
+        df_adj.loc[i, "adj_liq"] += df_adj.loc[i, "chad_lp"]
+
+    # recalculate ratio
+    df_adj["adj_ratio"] = df_adj["astro_value"] / df_adj["adj_liq"]
+
+# chad positions
+df_chad = df_adj[["pair", "chad_lp"]]
+df_adj.drop(columns=["chad_lp"], inplace=True)
+
+# chad tokens
+df_chad["astro_tokens"] = (
+    df_chad["chad_lp"] / df_adj["adj_liq"] * df_adj["astro_tokens"]
+)
+
+# chad token value
+df_chad["astro_value"] = df_chad["astro_tokens"] * astro_price
 
 # main body
 st.header("Astroport Lockdrop Dashboard")
@@ -162,7 +186,7 @@ cm = sns.light_palette("green", as_cmap=True)
 st.dataframe(
     df_liq.style.background_gradient(cmap=cm, subset=["ratio"]).format(
         {
-            "value_of_lockdrop": "${:,.0f}",
+            "astro_value": "${:,.0f}",
             "liq": "${:,.0f}",
             "astro_tokens": "{:,}",
             "ratio": "{:.2%}",
@@ -176,10 +200,23 @@ st.markdown("### Predicted Allocation")
 st.dataframe(
     df_adj.style.background_gradient(cmap=cm, subset=["adj_ratio"]).format(
         {
-            "value_of_lockdrop": "${:,.0f}",
+            "astro_value": "${:,.0f}",
             "adj_liq": "${:,.0f}",
             "astro_tokens": "{:,}",
             "adj_ratio": "{:.2%}",
+        }
+    ),
+    height=500,
+)
+
+st.markdown("### AstroChad Projections")
+
+st.dataframe(
+    df_chad.style.format(
+        {
+            "chad_lp": "${:,.0f}",
+            "astro_tokens": "{:,.0f}",
+            "astro_value": "${:,.0f}",
         }
     ),
     height=500,
