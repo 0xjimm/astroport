@@ -210,11 +210,11 @@ df_weights = pd.read_csv("lockdrop_weights.csv")
 
 # chad tokens
 df_chad["chad_weight"] = (
-    df_chad["chad_lp"] * df_weights.iloc[chad_lock]["adjusted_weight"]
+    df_chad["chad_lp"] * df_weights.iloc[chad_lock - 1]["adjusted_weight"]
 )
 
 df_chad["avg_weight"] = (df_adj["adj_liq"] - df_chad["chad_lp"]) * df_weights.iloc[
-    avg_lock
+    avg_lock - 1
 ]["adjusted_weight"]
 
 
