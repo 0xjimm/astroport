@@ -200,8 +200,6 @@ df_chad["total_rewards"] = df_chad["lp_rewards"] + df_chad["astro_value"]
 # main body
 st.header("Astroport Lockdrop Dashboard")
 
-st.markdown("Liquidity data from Coinhall.")
-
 st.markdown("### Original Allocation")
 
 cm = sns.light_palette("green", as_cmap=True)
