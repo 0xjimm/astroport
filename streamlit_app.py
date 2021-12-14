@@ -237,7 +237,18 @@ df_chad["lp_rewards"] = df_chad["chad_lp"] * df_adj["lp_rewards"]
 df_chad["total_rewards"] = df_chad["lp_rewards"] + df_chad["astro_value"]
 
 # main body
-st.header("Astroport Lockdrop Dashboard")
+st.header("Alpha Astro Tool")
+
+# description
+st.markdown(
+    """
+    Made by [@lejimmy](https://twitter.com/lejimmy) x [GT Capital](https://twitter.com/gtcapital_).
+    """
+)
+
+st.markdown(
+    "Accompanying video with [@danku_r](https://twitter.com/danku_r) can be found [here](https://www.youtube.com/watch?v=3gv4D_jcjNk)."
+)
 
 st.markdown("### Original Allocation")
 
