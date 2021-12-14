@@ -242,12 +242,8 @@ st.header("Alpha Astro Tool")
 # description
 st.markdown(
     """
-    Made by [@lejimmy](https://twitter.com/lejimmy) x [GT Capital](https://twitter.com/gtcapital_).
+    Made by [@lejimmy](https://twitter.com/lejimmy) and [@danku_r](https://twitter.com/danku_r).  The accompanying video can be found [here](https://www.youtube.com/watch?v=3gv4D_jcjNk).
     """
-)
-
-st.markdown(
-    "Accompanying video with [@danku_r](https://twitter.com/danku_r) can be found [here](https://www.youtube.com/watch?v=3gv4D_jcjNk)."
 )
 
 st.markdown("### Original Allocation")
