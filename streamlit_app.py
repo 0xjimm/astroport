@@ -190,6 +190,7 @@ with st.sidebar.expander("LP Staking Rewards"):
             f'{row["pair"]}', value=row["lp_rewards"]
         )
 
+# replit database
 db = Database(
     "https://kv.replit.com/v0/eyJhbGciOiJIUzUxMiIsImlzcyI6ImNvbm1hbiIsImtpZCI6InByb2Q6MSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb25tYW4iLCJleHAiOjE2Mzk2MzI1MzcsImlhdCI6MTYzOTUyMDkzNywiZGF0YWJhc2VfaWQiOiI2MTA3MDMxZC00ZTY0LTQzNTAtOWM5NS00NmQ0MWNkNDJkYmUifQ.1au5nrjAsIfdBU8ptDkjE8ovE2P3_vuhvBcra3xrUKkDjx4rvpwIBsfMwVBV5w_2bFyaxjqn7EqMugsSR9iXpw"
 )
@@ -306,7 +307,7 @@ st.dataframe(
     height=500,
 )
 
-st.markdown("### Predicted Allocation")
+st.markdown("### Live Allocations")
 
 # reorder table
 df_adj = df_adj[
@@ -332,7 +333,15 @@ st.markdown("### AstroChad Projections")
 
 # reorder table
 df_chad = df_chad[
-    ["pair", "chad_lp", "astro_tokens", "astro_value", "lp_rewards", "total_rewards"]
+    [
+        "pair",
+        "chad_lp",
+        "avg_lock",
+        "astro_tokens",
+        "astro_value",
+        "lp_rewards",
+        "total_rewards",
+    ]
 ]
 
 st.dataframe(
@@ -340,6 +349,7 @@ st.dataframe(
         {
             "chad_lp": "${:,.0f}",
             "astro_tokens": "{:,.0f}",
+            "avg_lock": "{:,.0f}",
             "astro_value": "${:,.0f}",
             "lp_rewards": "${:,.0f}",
             "total_rewards": "${:,.0f}",
