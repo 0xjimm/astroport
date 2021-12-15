@@ -281,10 +281,16 @@ df_chad["total_rewards"] = df_chad["lp_rewards"] + df_chad["astro_value"]
 st.header("Alpha Astro Tool")
 
 # description
-st.markdown(
+st.sidebar.write(
     """
-    Made by [@lejimmy](https://twitter.com/lejimmy) and [@danku_r](https://twitter.com/danku_r).  The accompanying video can be found [here](https://www.youtube.com/watch?v=3gv4D_jcjNk).
+    Made by [@lejimmy](https://twitter.com/lejimmy) and [@danku_r](https://twitter.com/danku_r).
+
+    Accompanying YouTube video [here](https://www.youtube.com/watch?v=3gv4D_jcjNk).
     """
+)
+
+st.info(
+    "To support more community tools like this, consider delegating to the [GT Capital Validator](https://station.terra.money/validator/terravaloper1rn9grwtg4p3f30tpzk8w0727ahcazj0f0n3xnk)."
 )
 
 st.markdown("### Original Allocation")
