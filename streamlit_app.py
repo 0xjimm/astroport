@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import seaborn as sns
-from google.oauth2 import service_account
-import gspread
+from replit.database import Database
 
 # sidebar
 st.sidebar.markdown(
@@ -191,41 +190,24 @@ with st.sidebar.expander("LP Staking Rewards"):
             f'{row["pair"]}', value=row["lp_rewards"]
         )
 
-
-# get lockdrop data
-creds = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=[
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive",
-    ],
+db = Database(
+    "https://kv.replit.com/v0/eyJhbGciOiJIUzUxMiIsImlzcyI6ImNvbm1hbiIsImtpZCI6InByb2Q6MSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb25tYW4iLCJleHAiOjE2Mzk2MzI1MzcsImlhdCI6MTYzOTUyMDkzNywiZGF0YWJhc2VfaWQiOiI2MTA3MDMxZC00ZTY0LTQzNTAtOWM5NS00NmQ0MWNkNDJkYmUifQ.1au5nrjAsIfdBU8ptDkjE8ovE2P3_vuhvBcra3xrUKkDjx4rvpwIBsfMwVBV5w_2bFyaxjqn7EqMugsSR9iXpw"
 )
 
-gc = gspread.authorize(creds)
-
-sh = gc.open("Astroport Lockdrop Data")
-
-# open worksheet
-worksheet = sh.get_worksheet(0)
-
-# lockdrop data
-df_lockdrop_data = pd.DataFrame(worksheet.get_all_records())
-
-# extract live lockdrop data
-df_liq["adj_liq"] = df_lockdrop_data["locked_value"] / 1_000_000
+# extract adj liquidity
+for i, row in df_liq.iterrows():
+    df_liq.loc[i, "adj_liq"] = db[row["pair"]][0] / 1_000_000
 
 # value of lockdrop
 df_liq["astro_value"] = df_liq["astro_tokens"] * astro_price
 
-# # ratios
+# ratios
 df_liq["ratio"] = df_liq["astro_value"] / df_liq["liq"]
 df_liq["adj_ratio"] = df_liq["astro_value"] / df_liq["adj_liq"]
-
 
 # separate tables
 df_adj = df_liq.drop(columns=["liq", "ratio"])
 df_liq = df_liq.drop(columns=["adj_liq", "adj_ratio"])
-
 
 # user lp positions
 with st.sidebar.expander("AstroChad LP Positions"):
@@ -250,6 +232,10 @@ with st.sidebar.expander("AstroChad LP Positions"):
 df_chad = df_adj[["pair", "chad_lp"]]
 df_adj.drop(columns=["chad_lp"], inplace=True)
 
+# avg lock data
+for i, row in df_chad.iterrows():
+    df_chad.loc[i, "avg_lock"] = db[row["pair"]][1] // 7
+
 # lockdrop weights
 df_weights = pd.read_csv("lockdrop_weights.csv")
 
@@ -269,9 +255,6 @@ with st.sidebar.expander("AstroChad Lockup Duration"):
             row["chad_lp"]
             * df_weights.iloc[int(df_chad.loc[i, "chad_lock"]) - 1]["adjusted_weight"]
         )
-
-# average lock in weeks
-df_chad["avg_lock"] = df_lockdrop_data["avg_lock"] // 7
 
 df_chad["avg_weight"] = (df_adj["adj_liq"] - df_chad["chad_lp"]) * df_weights.iloc[
     int(df_chad.loc[i, "avg_lock"]) - 1
