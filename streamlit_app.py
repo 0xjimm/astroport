@@ -289,11 +289,26 @@ st.sidebar.write(
     """
 )
 
+st.markdown(
+    """
+            
+            #### Instructions
+            Open the menu bar to input projected $ASTRO price, dual incentive staking rewards, user LP positions, and user lockup durations.
+
+"""
+)
+
 st.info(
     "To support more community tools like this, consider delegating to the [GT Capital Validator](https://station.terra.money/validator/terravaloper1rn9grwtg4p3f30tpzk8w0727ahcazj0f0n3xnk)."
 )
 
-st.markdown("### Original Allocation")
+st.markdown(
+    """### Terraswap Liquidity
+
+Current pair liquidity on Terraswap, $ASTRO token to liquidity ratio, and current LP incentives.
+
+"""
+)
 
 cm = sns.light_palette("green", as_cmap=True)
 
@@ -313,7 +328,13 @@ st.dataframe(
     height=500,
 )
 
-st.markdown("### Live Allocations")
+st.markdown(
+    """### Astroport Liquidity
+
+Current liquidity in Astroport, adjusted $ASTRO token to liquidity ratio, and LP incentives if rewards are migrated.
+
+"""
+)
 
 # reorder table
 df_adj = df_adj[
@@ -335,7 +356,13 @@ st.dataframe(
     height=500,
 )
 
-st.markdown("### AstroChad Projections")
+st.markdown(
+    """### AstroChad Projections
+
+Projected rewards based on user inputs, average lock in weeks, and LP rewards.
+
+"""
+)
 
 # reorder table
 df_chad = df_chad[
