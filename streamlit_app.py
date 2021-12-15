@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import seaborn as sns
-
-# streamlit config
-# st.set_page_config(layout="wide")
+from terra_sdk.client.lcd import LCDClient
+from google.oauth2 import service_account
+import gspread
 
 # sidebar
 st.sidebar.markdown(
@@ -50,21 +50,81 @@ df = (
 
 # astroport lockdrop pairs
 astro_pairs = [
-    ["bLUNA-LUNA", "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p", 17250000, 0],
-    ["LUNA-UST", "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6", 21750000, 0],
-    ["ANC-UST", "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3", 14250000, 0.8474],
-    ["MIR-UST", "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux", 6750000, 0.2023],
-    ["ORION-UST", "terra1z6tp0ruxvynsx5r9mmcc2wcezz9ey9pmrw5r8g", 1500000, 0.7904],
-    ["STT-UST", "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll", 3750000, 0.7230],
-    ["VKR-UST", "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0", 2250000, 2.703],
-    ["MINE-UST", "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz", 3000000, 0.8577],
-    ["PSI-UST", "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf", 2250000, 0.97],
-    ["APOLLO-UST", "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78", 2250000, 0],
+    [
+        "bLUNA-LUNA",
+        "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p",
+        "terra1nuy34nwnsh53ygpc4xprlj263cztw7vc99leh2",
+        17250000,
+        0,
+    ],
+    [
+        "LUNA-UST",
+        "terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6",
+        "terra17dkr9rnmtmu7x4azrpupukvur2crnptyfvsrvr",
+        21750000,
+        0,
+    ],
+    [
+        "ANC-UST",
+        "terra1gm5p3ner9x9xpwugn9sp6gvhd0lwrtkyrecdn3",
+        "terra1gecs98vcuktyfkrve9czrpgtg0m3aq586x6gzm",
+        14250000,
+        0.8474,
+    ],
+    [
+        "MIR-UST",
+        "terra1amv303y8kzxuegvurh0gug2xe9wkgj65enq2ux",
+        "terra17gjf2zehfvnyjtdgua9p9ygquk6gukxe7ucgwh",
+        6750000,
+        0.2023,
+    ],
+    [
+        "ORION-UST",
+        "terra1z6tp0ruxvynsx5r9mmcc2wcezz9ey9pmrw5r8g",
+        "terra14ffp0waxcck733a9jfd58d86h9rac2chf5xhev",
+        1500000,
+        0.7904,
+    ],
+    [
+        "STT-UST",
+        "terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll",
+        "terra1uwhf02zuaw7grj6gjs7pxt5vuwm79y87ct5p70",
+        3750000,
+        0.7230,
+    ],
+    [
+        "VKR-UST",
+        "terra1e59utusv5rspqsu8t37h5w887d9rdykljedxw0",
+        "terra17fysmcl52xjrs8ldswhz7n6mt37r9cmpcguack",
+        2250000,
+        2.703,
+    ],
+    [
+        "MINE-UST",
+        "terra178jydtjvj4gw8earkgnqc80c3hrmqj4kw2welz",
+        "terra1rqkyau9hanxtn63mjrdfhpnkpddztv3qav0tq2",
+        3000000,
+        0.8577,
+    ],
+    [
+        "PSI-UST",
+        "terra163pkeeuwxzr0yhndf8xd2jprm9hrtk59xf7nqf",
+        "terra1q6r8hfdl203htfvpsmyh8x689lp2g0m7856fwd",
+        2250000,
+        0.97,
+    ],
+    [
+        "APOLLO-UST",
+        "terra1xj2w7w8mx6m2nueczgsxy2gnmujwejjeu2xf78",
+        "terra1n3gt4k3vth0uppk0urche6m3geu9eqcyujt88q",
+        2250000,
+        0,
+    ],
 ]
 
 # convert to dataframe
 astro_pairs = pd.DataFrame(
-    astro_pairs, columns=["pair", "address", "astro_tokens", "lp_rewards"]
+    astro_pairs, columns=["pair", "address", "tlp", "astro_tokens", "lp_rewards"]
 )
 
 # filter for astroport pairs
@@ -132,34 +192,41 @@ with st.sidebar.expander("LP Staking Rewards"):
             f'{row["pair"]}', value=row["lp_rewards"]
         )
 
-# slider bars for predcitions
-with st.sidebar.expander("Liquidity Predictions"):
-    for i, row in df_liq.iterrows():
 
-        df_liq.loc[i, "adj"] = (
-            st.slider(
-                f'{row["pair"]}',
-                format="%d%%",
-                min_value=0,
-                max_value=200,
-                value=100,
-            )
-            / 100
-        )
+# get lockdrop data
+creds = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=[
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ],
+)
 
-        df_liq.loc[i, "adj_liq"] = df_liq.loc[i, "liq"] * (df_liq.loc[i, "adj"])
+gc = gspread.authorize(creds)
 
+sh = gc.open("Astroport Lockdrop Data")
+
+# open worksheet
+worksheet = sh.get_worksheet(0)
+
+# lockdrop data
+df_lockdrop_data = pd.DataFrame(worksheet.get_all_records())
+
+# extract live lockdrop data
+df_liq["adj_liq"] = df_lockdrop_data["locked_value"] / 1_000_000
 
 # value of lockdrop
 df_liq["astro_value"] = df_liq["astro_tokens"] * astro_price
 
-# ratios
+# # ratios
 df_liq["ratio"] = df_liq["astro_value"] / df_liq["liq"]
 df_liq["adj_ratio"] = df_liq["astro_value"] / df_liq["adj_liq"]
 
+
 # separate tables
-df_adj = df_liq.drop(columns=["adj", "liq", "ratio"])
-df_liq = df_liq.drop(columns=["adj", "adj_liq", "adj_ratio"])
+df_adj = df_liq.drop(columns=["liq", "ratio"])
+df_liq = df_liq.drop(columns=["adj_liq", "adj_ratio"])
+
 
 # user lp positions
 with st.sidebar.expander("AstroChad LP Positions"):
@@ -204,21 +271,12 @@ with st.sidebar.expander("AstroChad Lockup Duration"):
             * df_weights.iloc[int(df_chad.loc[i, "chad_lock"]) - 1]["adjusted_weight"]
         )
 
-# avg weights
-with st.sidebar.expander("Average Lockup Duration"):
+# average lock in weeks
+df_chad["avg_lock"] = df_lockdrop_data["avg_lock"] // 7
 
-    for i, row in df_chad.iterrows():
-        df_chad.loc[i, "avg_lock"] = st.number_input(
-            f"{row['pair']}",
-            min_value=2,
-            max_value=52,
-            value=12,
-            help="Lockup in weeks",
-        )
-
-        df_chad.loc[i, "avg_weight"] = (
-            df_adj.loc[i, "adj_liq"] - row["chad_lp"]
-        ) * df_weights.iloc[int(df_chad.loc[i, "avg_lock"]) - 1]["adjusted_weight"]
+df_chad["avg_weight"] = (df_adj["adj_liq"] - df_chad["chad_lp"]) * df_weights.iloc[
+    int(df_chad.loc[i, "avg_lock"]) - 1
+]["adjusted_weight"]
 
 # chad rewards
 df_chad["astro_tokens"] = (
