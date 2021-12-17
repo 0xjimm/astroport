@@ -192,7 +192,7 @@ with st.sidebar.expander("LP Staking Rewards"):
 
 # replit database
 db = Database(
-    "https://kv.replit.com/v0/eyJhbGciOiJIUzUxMiIsImlzcyI6ImNvbm1hbiIsImtpZCI6InByb2Q6MSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb25tYW4iLCJleHAiOjE2Mzk3MTYyNzIsImlhdCI6MTYzOTYwNDY3MiwiZGF0YWJhc2VfaWQiOiI2MTA3MDMxZC00ZTY0LTQzNTAtOWM5NS00NmQ0MWNkNDJkYmUifQ.cTRlueeaiHAV4fs2aeEEQDbiYbtW4CbfMOXGCKspOMfJ59m91mOywdrgYmox1hN4HptkAqDHyloRnb09RwGT0w"
+    "https://kv.replit.com/v0/eyJhbGciOiJIUzUxMiIsImlzcyI6ImNvbm1hbiIsImtpZCI6InByb2Q6MSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb25tYW4iLCJleHAiOjE2Mzk4MTE0MDYsImlhdCI6MTYzOTY5OTgwNiwiZGF0YWJhc2VfaWQiOiI2MTA3MDMxZC00ZTY0LTQzNTAtOWM5NS00NmQ0MWNkNDJkYmUifQ.h1MTOiLhisLnBwZITdGTOqbi7WB_BQBP_CZ9pxpGDzPEJLtpHSSEKOaq5d6AjL8T1A82JMN1CowyhQBCHg4R5A"
 )
 
 # extract adj liquidity
